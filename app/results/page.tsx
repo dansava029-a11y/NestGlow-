@@ -24,7 +24,7 @@ interface Bundle {
 type ModalState = 'none' | 'confirm' | 'enter';
 
 export default function ResultsPage() {
-  const [lang, setLang] = useLang();
+  const [lang, _setLang] = useLang();
   const [bundles, setBundles] = useState<Bundle[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [sending, setSending] = useState(false);

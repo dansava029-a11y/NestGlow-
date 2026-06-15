@@ -12,7 +12,7 @@ function formatBudget(value: number): string {
 }
 
 export default function Home() {
-  const [lang, setLang] = useLang();
+  const [lang, _setLang] = useLang();
   const [photo, setPhoto] = useState<string | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [budget, setBudget] = useState(150000);

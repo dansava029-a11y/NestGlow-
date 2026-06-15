@@ -60,7 +60,7 @@ Return ONLY valid JSON, no markdown:
     const bundle = JSON.parse(jsonMatch[0]);
     bundle.monthly = Math.round(bundle.total_price / 12);
     return bundle;
-  } catch (err) {
+  } catch (_err) {
     if (retries > 0) {
       return generateBundle(style, budget, filteredProducts, contextSummary, retries - 1);
     }

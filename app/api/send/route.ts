@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const CATEGORY_EMOJIS: Record<string, string> = {
   sofa: '🛋️',
   table: '☕',
@@ -19,6 +17,7 @@ function formatPrice(price: number): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const { email, bundle, lang } = await req.json();
 
     if (!email || !bundle) {

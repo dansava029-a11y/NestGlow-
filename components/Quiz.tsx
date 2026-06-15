@@ -62,13 +62,13 @@ export default function Quiz({ onSubmit, onClose, lang }: QuizProps) {
 
   const OptionCard = ({
     label,
-    value,
+    value: _value,
     selected,
     onSelect,
     multi = false,
   }: {
     label: string;
-    value: string;
+    value: string; // passed for key/identification by parent
     selected: boolean;
     onSelect: () => void;
     multi?: boolean;
