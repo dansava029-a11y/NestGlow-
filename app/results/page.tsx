@@ -109,35 +109,48 @@ export default function ResultsPage() {
       {/* Send Loader */}
       <Loader visible={sending} lang={lang} />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-12">
-          <div>
-            <h1 className="font-heading text-h1 text-text-primary leading-tight">
-              {strings.results_title}
-            </h1>
-          </div>
+      {/* Top bar with back button */}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-bg/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
           <button
             onClick={handleStartOver}
-            className="btn-secondary font-body text-small flex-shrink-0"
+            className="flex items-center gap-2 text-accent hover:text-accent2 font-body text-sm font-medium transition-colors duration-200"
           >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13L5 8l5-5" />
+            </svg>
             {strings.start_over}
           </button>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+
+        {/* Hero heading */}
+        <div className="text-center mb-12">
+          <h1 className="font-heading text-text-primary mb-3" style={{ fontSize: '3rem', lineHeight: '1.05' }}>
+            {strings.results_title}
+          </h1>
+          <p className="font-body text-muted text-base">
+            {lang === 'ru'
+              ? 'Выберите стиль, который вам нравится'
+              : 'Choose the style you love most'}
+          </p>
         </div>
 
         {/* Success toast */}
         {sendSuccess && (
-          <div className="bg-success/10 border border-success/30 text-success rounded-card px-4 py-3 mb-6 font-body text-small font-medium">
+          <div className="bg-success/10 border border-success/30 text-success rounded-xl px-4 py-3 mb-6 font-body text-sm font-medium text-center">
             {strings.success_msg}
           </div>
         )}
 
         {/* Error toast */}
         {sendError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-card px-4 py-3 mb-6 font-body text-small">
-            {sendError}
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 font-body text-sm flex items-center justify-between">
+            <span>{sendError}</span>
             <button
-              className="ml-3 text-accent font-medium hover:text-accent2 transition-colors duration-200"
+              className="ml-3 text-accent font-medium hover:text-accent2 transition-colors duration-200 flex-shrink-0"
               onClick={() => setSendError(null)}
             >
               {strings.retry}
@@ -145,12 +158,16 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* Bundle Cards */}
+        {/* Bundle Cards — 3 col desktop, stacked mobile */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {bundles.map((bundle, i) => (
             <div
               key={i}
-              className={`card-stagger-${i + 1}`}
+              className={`card-stagger-${i + 1} transition-all duration-300 ${
+                activeIndex === i
+                  ? 'scale-[1.03] md:scale-105'
+                  : 'opacity-70 hover:opacity-90'
+              }`}
             >
               <BundleCard
                 bundle={bundle}
@@ -166,27 +183,27 @@ export default function ResultsPage() {
 
       {/* Confirm Email Modal */}
       {modal === 'confirm' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/90 backdrop-blur-sm p-4">
-          <div className="bg-surface border border-border rounded-card shadow-card-hover p-8 w-full max-w-md">
-            <h3 className="font-heading text-h3 text-text-primary mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border rounded-2xl shadow-card-hover p-8 w-full max-w-md animate-fadeInUp">
+            <h3 className="font-heading text-text-primary mb-2" style={{ fontSize: '1.75rem' }}>
               {strings.get_room}
             </h3>
-            <p className="text-muted font-body text-small mb-4">
+            <p className="text-muted font-body text-sm mb-4">
               {strings.confirm_email_msg}
             </p>
-            <div className="bg-bg border border-border rounded-input px-4 py-3 mb-6 font-body text-body text-text-primary">
+            <div className="bg-bg border border-border rounded-xl px-4 py-3 mb-6 font-body text-base text-text-primary">
               {savedEmail}
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setModal('none')}
-                className="btn-secondary flex-1 font-body text-small"
+                className="btn-secondary flex-1 font-body text-sm"
               >
                 {strings.close}
               </button>
               <button
                 onClick={() => handleSend(savedEmail!)}
-                className="btn-primary flex-1 font-body text-small"
+                className="btn-primary flex-1 font-body text-sm"
               >
                 {strings.confirm_send}
               </button>
@@ -197,9 +214,9 @@ export default function ResultsPage() {
 
       {/* Enter Email Modal */}
       {modal === 'enter' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/90 backdrop-blur-sm p-4">
-          <div className="bg-surface border border-border rounded-card shadow-card-hover p-8 w-full max-w-md">
-            <h3 className="font-heading text-h3 text-text-primary mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border rounded-2xl shadow-card-hover p-8 w-full max-w-md animate-fadeInUp">
+            <h3 className="font-heading text-text-primary mb-4" style={{ fontSize: '1.75rem' }}>
               {strings.enter_email}
             </h3>
             <input
@@ -214,14 +231,14 @@ export default function ResultsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setModal('none')}
-                className="btn-secondary flex-1 font-body text-small"
+                className="btn-secondary flex-1 font-body text-sm"
               >
                 {strings.close}
               </button>
               <button
                 onClick={() => handleSend(email)}
                 disabled={!email.includes('@')}
-                className={`btn-primary flex-1 font-body text-small ${!email.includes('@') ? 'opacity-50 cursor-not-allowed hover:translate-y-0 hover:bg-accent' : ''}`}
+                className={`btn-primary flex-1 font-body text-sm ${!email.includes('@') ? 'opacity-50 cursor-not-allowed hover:translate-y-0 hover:bg-accent' : ''}`}
               >
                 {strings.send_btn}
               </button>

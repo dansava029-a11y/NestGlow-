@@ -60,6 +60,8 @@ export default function Quiz({ onSubmit, onClose, lang }: QuizProps) {
     return false;
   };
 
+  const progressPercent = (step / TOTAL_STEPS) * 100;
+
   const OptionCard = ({
     label,
     value: _value,
@@ -68,7 +70,7 @@ export default function Quiz({ onSubmit, onClose, lang }: QuizProps) {
     multi = false,
   }: {
     label: string;
-    value: string; // passed for key/identification by parent
+    value: string;
     selected: boolean;
     onSelect: () => void;
     multi?: boolean;
@@ -76,186 +78,190 @@ export default function Quiz({ onSubmit, onClose, lang }: QuizProps) {
     <button
       onClick={onSelect}
       className={`
-        w-full text-left p-4 rounded-card border transition-all duration-200
-        font-body text-body
+        w-full text-left rounded-xl border transition-all duration-200
+        font-body
         ${selected
-          ? 'border-accent bg-accent/10 text-text-primary font-medium shadow-card'
-          : 'border-border bg-surface text-text-primary hover:border-accent hover:bg-accent/5'
+          ? 'border-accent bg-accent/10 text-text-primary shadow-card'
+          : 'border-border bg-bg text-text-primary hover:border-accent/50 hover:bg-accent/5'
         }
       `}
+      style={{ minHeight: '64px', padding: '14px 16px' }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-base leading-snug">{label}</span>
+        {/* Checkmark on right */}
         <div className={`
           w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200
           ${selected ? 'border-accent bg-accent' : 'border-border'}
         `}>
           {selected && (
-            <div className={`${multi ? 'w-2 h-1.5 border-b-2 border-r-2 border-white rotate-45 mb-0.5' : 'w-2 h-2 rounded-full bg-white'}`} />
+            multi
+              ? (
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )
+              : <div className="w-2 h-2 rounded-full bg-white" />
           )}
         </div>
-        {label}
       </div>
     </button>
   );
 
-  const progressPercent = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
+  const getQuestion = () => {
+    if (step === 1) return strings.q1_label;
+    if (step === 2) return strings.q2_label;
+    if (step === 3) return strings.q3_label;
+    if (step === 4) return strings.q4_label;
+    return strings.q5_label;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-bg/95 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-surface rounded-card shadow-card-hover border border-border overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading text-h3 text-text-primary">
-              {strings.quiz_label}
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-muted hover:text-text-primary transition-colors duration-200 text-xl"
-              aria-label={strings.close}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Progress bar */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-accent rounded-full transition-all duration-400 ease-out"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <span className="text-muted text-small font-body whitespace-nowrap">
-              {step} {strings.step_of} {TOTAL_STEPS}
-            </span>
-          </div>
-        </div>
-
-        {/* Content */}
+    <div className="fixed inset-0 z-50 flex flex-col bg-surface">
+      {/* Progress bar — very top thin line */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-border z-10">
         <div
-          className={`p-6 transition-all duration-150 ${slideDir === 'in' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+          className="h-full bg-accent transition-all duration-400 ease-out"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      {/* Top bar: step indicator + close */}
+      <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
+        <div className="text-muted font-body text-sm">
+          {lang === 'ru' ? 'Шаг' : 'Step'} {step} {strings.step_of} {TOTAL_STEPS}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-border transition-colors duration-200 text-muted hover:text-text-primary"
+          aria-label={strings.close}
         >
-          {step === 1 && (
-            <div className="space-y-3">
-              <p className="font-body text-body text-text-primary font-medium mb-4">
-                {strings.q1_label}
-              </p>
-              {[strings.q1_opt1, strings.q1_opt2, strings.q1_opt3, strings.q1_opt4].map((opt) => (
-                <OptionCard
-                  key={opt}
-                  label={opt}
-                  value={opt}
-                  selected={data.occasion === opt}
-                  onSelect={() => setData(d => ({ ...d, occasion: opt }))}
-                />
-              ))}
-            </div>
-          )}
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="1" y1="1" x2="13" y2="13" />
+            <line x1="13" y1="1" x2="1" y2="13" />
+          </svg>
+        </button>
+      </div>
 
-          {step === 2 && (
-            <div className="space-y-3">
-              <p className="font-body text-body text-text-primary font-medium mb-4">
-                {strings.q2_label}
-              </p>
-              {[strings.q2_opt1, strings.q2_opt2, strings.q2_opt3, strings.q2_opt4].map((opt) => (
-                <OptionCard
-                  key={opt}
-                  label={opt}
-                  value={opt}
-                  selected={data.budget === opt}
-                  onSelect={() => setData(d => ({ ...d, budget: opt }))}
-                />
-              ))}
-            </div>
-          )}
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-lg mx-auto px-6 py-8">
+          {/* Question in Cormorant 32px centered */}
+          <h2 className="font-heading text-text-primary text-center mb-8" style={{ fontSize: '2rem', lineHeight: '1.2' }}>
+            {getQuestion()}
+          </h2>
 
-          {step === 3 && (
-            <div className="space-y-3">
-              <p className="font-body text-body text-text-primary font-medium mb-4">
-                {strings.q3_label}
-              </p>
-              {[strings.q3_opt1, strings.q3_opt2, strings.q3_opt3, strings.q3_opt4].map((opt) => (
-                <OptionCard
-                  key={opt}
-                  label={opt}
-                  value={opt}
-                  selected={data.feelings.includes(opt)}
-                  onSelect={() => {
-                    setData(d => ({
-                      ...d,
-                      feelings: d.feelings.includes(opt)
-                        ? d.feelings.filter(f => f !== opt)
-                        : [...d.feelings, opt]
-                    }));
-                  }}
-                  multi
-                />
-              ))}
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-3">
-              <p className="font-body text-body text-text-primary font-medium mb-4">
-                {strings.q4_label}
-              </p>
-              {[strings.q4_opt1, strings.q4_opt2, strings.q4_opt3, strings.q4_opt4].map((opt) => (
-                <OptionCard
-                  key={opt}
-                  label={opt}
-                  value={opt}
-                  selected={data.room === opt}
-                  onSelect={() => setData(d => ({ ...d, room: opt }))}
-                />
-              ))}
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-4">
-              <p className="font-body text-body text-text-primary font-medium">
-                {strings.q5_label}
-              </p>
-              <input
-                type="email"
-                value={data.email}
-                onChange={e => setData(d => ({ ...d, email: e.target.value }))}
-                placeholder={strings.email_placeholder}
-                className="input-field font-body"
-                autoFocus
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <div className="p-6 border-t border-border flex items-center justify-between">
-          <button
-            onClick={step === 1 ? onClose : goBack}
-            className="btn-secondary text-small"
+          {/* Options */}
+          <div
+            className={`space-y-3 transition-all duration-150 ${slideDir === 'in' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
           >
-            {step === 1 ? strings.close : strings.quiz_back}
-          </button>
+            {step === 1 && (
+              <>
+                {[strings.q1_opt1, strings.q1_opt2, strings.q1_opt3, strings.q1_opt4].map((opt) => (
+                  <OptionCard
+                    key={opt}
+                    label={opt}
+                    value={opt}
+                    selected={data.occasion === opt}
+                    onSelect={() => setData(d => ({ ...d, occasion: opt }))}
+                  />
+                ))}
+              </>
+            )}
 
-          {step < TOTAL_STEPS ? (
-            <button
-              onClick={goNext}
-              disabled={!canProceed()}
-              className={`btn-primary text-small transition-all duration-200 ${!canProceed() ? 'opacity-50 cursor-not-allowed hover:translate-y-0' : ''}`}
-            >
-              {strings.quiz_next}
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={!canProceed()}
-              className={`btn-primary text-small transition-all duration-200 ${!canProceed() ? 'opacity-50 cursor-not-allowed hover:translate-y-0' : ''}`}
-            >
-              {strings.quiz_submit}
-            </button>
-          )}
+            {step === 2 && (
+              <>
+                {[strings.q2_opt1, strings.q2_opt2, strings.q2_opt3, strings.q2_opt4].map((opt) => (
+                  <OptionCard
+                    key={opt}
+                    label={opt}
+                    value={opt}
+                    selected={data.budget === opt}
+                    onSelect={() => setData(d => ({ ...d, budget: opt }))}
+                  />
+                ))}
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                {[strings.q3_opt1, strings.q3_opt2, strings.q3_opt3, strings.q3_opt4].map((opt) => (
+                  <OptionCard
+                    key={opt}
+                    label={opt}
+                    value={opt}
+                    selected={data.feelings.includes(opt)}
+                    onSelect={() => {
+                      setData(d => ({
+                        ...d,
+                        feelings: d.feelings.includes(opt)
+                          ? d.feelings.filter(f => f !== opt)
+                          : [...d.feelings, opt]
+                      }));
+                    }}
+                    multi
+                  />
+                ))}
+              </>
+            )}
+
+            {step === 4 && (
+              <>
+                {[strings.q4_opt1, strings.q4_opt2, strings.q4_opt3, strings.q4_opt4].map((opt) => (
+                  <OptionCard
+                    key={opt}
+                    label={opt}
+                    value={opt}
+                    selected={data.room === opt}
+                    onSelect={() => setData(d => ({ ...d, room: opt }))}
+                  />
+                ))}
+              </>
+            )}
+
+            {step === 5 && (
+              <div className="space-y-4">
+                <input
+                  type="email"
+                  value={data.email}
+                  onChange={e => setData(d => ({ ...d, email: e.target.value }))}
+                  placeholder={strings.email_placeholder}
+                  className="input-field font-body text-base"
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && canProceed() && handleSubmit()}
+                />
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Bottom navigation — Back | Next */}
+      <div className="flex-shrink-0 border-t border-border px-6 py-5 flex items-center justify-between gap-4 bg-surface">
+        <button
+          onClick={step === 1 ? onClose : goBack}
+          className="btn-secondary font-body text-sm flex-1"
+        >
+          {step === 1 ? strings.close : strings.quiz_back}
+        </button>
+
+        {step < TOTAL_STEPS ? (
+          <button
+            onClick={goNext}
+            disabled={!canProceed()}
+            className={`btn-primary font-body text-sm flex-1 transition-all duration-200 ${!canProceed() ? 'opacity-50 cursor-not-allowed hover:translate-y-0' : ''}`}
+          >
+            {strings.quiz_next}
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={!canProceed()}
+            className={`btn-primary font-body text-sm flex-1 transition-all duration-200 ${!canProceed() ? 'opacity-50 cursor-not-allowed hover:translate-y-0' : ''}`}
+          >
+            {strings.quiz_submit}
+          </button>
+        )}
       </div>
     </div>
   );
