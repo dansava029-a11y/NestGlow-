@@ -8,8 +8,8 @@ import UploadZone from '@/components/UploadZone';
 import Quiz from '@/components/Quiz';
 import Loader from '@/components/Loader';
 
-function formatBudget(value: number): string {
-  return `₽${value.toLocaleString('ru-RU')}`;
+function formatBudget(v: number) {
+  return `₽${v.toLocaleString('ru-RU')}`;
 }
 
 export default function Home() {
@@ -23,20 +23,18 @@ export default function Home() {
   const [retryFn, setRetryFn] = useState<(() => void) | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const router = useRouter();
-  const strings = t[lang];
+  const s = t[lang];
 
-  const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 60000) => {
+  const fetchWithTimeout = async (url: string, options: RequestInit, ms = 60000) => {
     abortRef.current = new AbortController();
-    const timeout = setTimeout(() => abortRef.current?.abort(), timeoutMs);
+    const timer = setTimeout(() => abortRef.current?.abort(), ms);
     try {
       const res = await fetch(url, { ...options, signal: abortRef.current.signal });
-      clearTimeout(timeout);
+      clearTimeout(timer);
       return res;
     } catch (err: any) {
-      clearTimeout(timeout);
-      if (err.name === 'AbortError') {
-        throw new Error(strings.timeout_msg);
-      }
+      clearTimeout(timer);
+      if (err.name === 'AbortError') throw new Error(s.timeout_msg);
       throw err;
     }
   };
@@ -44,13 +42,11 @@ export default function Home() {
   const runFlow = async (photoData: string | null, quizAnswers: any) => {
     setLoading(true);
     setError(null);
-
     try {
       let roomData = null;
       let styleProfile = null;
       let detectedBudget = budget;
 
-      // Step 1: Analyze photo or process quiz
       if (photoData) {
         const res = await fetchWithTimeout('/api/analyze', {
           method: 'POST',
@@ -69,34 +65,22 @@ export default function Home() {
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         styleProfile = data;
-        // Extract budget from quiz if available
         if (styleProfile.budget_max) detectedBudget = styleProfile.budget_max;
-        // Save email from quiz
-        if (quizAnswers.email) {
-          localStorage.setItem('nestglow_email', quizAnswers.email);
-        }
+        if (quizAnswers.email) localStorage.setItem('nestglow_email', quizAnswers.email);
       }
 
-      // Step 2: Generate bundles
       const primaryStyle = roomData?.current_style || styleProfile?.detected_style || 'modern';
       const bundleRes = await fetchWithTimeout('/api/bundle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          style: primaryStyle,
-          budget: detectedBudget,
-          roomData,
-          quizData: styleProfile,
-        }),
+        body: JSON.stringify({ style: primaryStyle, budget: detectedBudget, roomData, quizData: styleProfile }),
       });
       const bundles = await bundleRes.json();
       if (bundles.error) throw new Error(bundles.error);
-
-      // Save and navigate
       localStorage.setItem('nestglow_bundles', JSON.stringify(bundles));
       router.push('/results');
     } catch (err: any) {
-      setError(err.message || strings.error_msg);
+      setError(err.message || s.error_msg);
       const retry = () => runFlow(photoData, quizAnswers);
       setRetryFn(() => retry);
     } finally {
@@ -104,235 +88,167 @@ export default function Home() {
     }
   };
 
-  const handleCTA = () => {
-    if (!photo && !quizData) return;
-    runFlow(photo, quizData);
-  };
-
-  const handleQuizSubmit = (answers: any) => {
-    setShowQuiz(false);
-    setQuizData(answers);
-    // Auto-trigger flow
-    runFlow(null, answers);
-  };
-
+  const handleCTA = () => { if (photo || quizData) runFlow(photo, quizData); };
+  const handleQuizSubmit = (answers: any) => { setShowQuiz(false); setQuizData(answers); runFlow(null, answers); };
   const canProceed = !!photo || !!quizData;
+  const pct = ((budget - 15000) / 485000) * 100;
 
   return (
     <main className="min-h-screen bg-bg">
-      {/* Loader */}
       <Loader visible={loading} lang={lang} />
+      {showQuiz && <Quiz onSubmit={handleQuizSubmit} onClose={() => setShowQuiz(false)} lang={lang} />}
 
-      {/* Quiz Modal */}
-      {showQuiz && (
-        <Quiz
-          onSubmit={handleQuizSubmit}
-          onClose={() => setShowQuiz(false)}
-          lang={lang}
+      {/* ── HERO ── */}
+      <section className="hero-section relative w-full overflow-hidden">
+        <Image
+          src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400&q=85"
+          alt="Cozy living room"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
         />
-      )}
+        {/* Gradient: subtle top, strong bottom */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.05) 35%, rgba(26,16,8,0.82) 100%)' }}
+        />
 
-      {/* Desktop: two-column split. Mobile: stacked */}
-      <div className="flex flex-col md:flex-row min-h-screen">
+        {/* Brand + tagline — bottom of photo */}
+        <div className="absolute bottom-0 left-0 right-0 px-6 pb-8 max-w-2xl">
+          <p className="font-body text-white/55 text-[10px] tracking-[0.25em] uppercase mb-3">
+            Interior AI
+          </p>
+          <h1
+            className="font-heading text-white"
+            style={{ fontSize: 'clamp(56px, 15vw, 96px)', lineHeight: 0.95, letterSpacing: '-0.025em' }}
+          >
+            Nestglow
+          </h1>
+          <p className="font-body text-white/70 mt-3 leading-snug max-w-xs" style={{ fontSize: '0.9rem' }}>
+            {s.hero_sub}
+          </p>
+        </div>
+      </section>
 
-        {/* LEFT PANEL — Hero image */}
-        {/* Mobile: top image block with overlay text */}
-        <div className="relative md:sticky md:top-0 md:h-screen md:w-1/2 flex-shrink-0 overflow-hidden">
-          {/* Mobile height */}
-          <div className="relative w-full h-[50vh] md:h-full">
-            <Image
-              src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1400&q=80"
-              alt="Cozy living room"
-              fill
-              priority
-              className="object-cover animate-fadeIn"
-              sizes="(max-width: 768px) 100vw, 50vw"
-            />
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+      {/* ── ACTION PANEL ── */}
+      <section className="relative bg-bg px-5 pt-7 pb-10 max-w-lg mx-auto lg:max-w-xl">
 
-            {/* Mobile-only text over image */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 md:hidden">
-              <div className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-body font-semibold px-3 py-1 rounded-full mb-3 tracking-widest uppercase">
-                Interior AI
-              </div>
-              <h1 className="font-heading text-white leading-tight" style={{ fontSize: '2.5rem', lineHeight: '1.1' }}>
-                {strings.hero_title}
-              </h1>
-            </div>
-          </div>
+        {/* Upload zone */}
+        <UploadZone
+          onUpload={(b64) => { setPhoto(b64); setQuizData(null); }}
+          lang={lang}
+          preview={photo}
+        />
+
+        {/* OR divider */}
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-muted text-[11px] font-body px-1 tracking-wide">
+            {lang === 'ru' ? 'или' : 'or'}
+          </span>
+          <div className="flex-1 h-px bg-border" />
         </div>
 
-        {/* RIGHT PANEL — Content */}
-        <div className="flex-1 overflow-y-auto bg-bg">
-          <div className="max-w-xl mx-auto px-6 md:px-10 py-12 md:py-16">
-
-            {/* Desktop-only badge + heading */}
-            <div className="hidden md:block mb-10">
-              <div className="opacity-0-init animate-fadeInUp delay-100 inline-block bg-accent/10 text-accent text-xs font-body font-semibold px-4 py-1.5 rounded-full mb-6 tracking-widest uppercase">
-                Interior AI
-              </div>
-              <h1 className="font-heading text-text-primary leading-tight mb-4" style={{ fontSize: '4.5rem', lineHeight: '1.05' }}>
-                <span className="block opacity-0-init animate-fadeInUp delay-200">
-                  {strings.hero_title.split('.')[0]}.
-                </span>
-                {strings.hero_title.split('.').length > 2 && (
-                  <span className="block opacity-0-init animate-fadeInUp delay-300 text-accent">
-                    {strings.hero_title.split('.')[1].trim()}.
-                  </span>
-                )}
-                {strings.hero_title.split('.').length > 3 && (
-                  <span className="block opacity-0-init animate-fadeInUp delay-400">
-                    {strings.hero_title.split('.')[2].trim()}.
-                  </span>
-                )}
-              </h1>
-              <p className="font-body text-muted text-lg opacity-0-init animate-fadeInUp delay-300">
-                {strings.hero_sub}
-              </p>
-            </div>
-
-            {/* Mobile-only subtitle (image has heading) */}
-            <p className="font-body text-muted text-base mb-8 md:hidden">
-              {strings.hero_sub}
-            </p>
-
-            {/* Upload Zone */}
-            <div className="opacity-0-init animate-fadeInUp delay-400 mb-5">
-              <UploadZone
-                onUpload={(base64) => {
-                  setPhoto(base64);
-                  setQuizData(null);
-                }}
-                lang={lang}
-                preview={photo}
-              />
-            </div>
-
-            {/* Quiz Entry Card */}
-            <div
-              onClick={() => setShowQuiz(true)}
-              className={`
-                opacity-0-init animate-fadeInUp delay-500
-                relative rounded-xl border cursor-pointer overflow-hidden mb-5
-                transition-all duration-200 hover:shadow-card-hover
-                ${quizData
-                  ? 'border-accent bg-accent/5'
-                  : 'border-border bg-surface hover:border-accent/50'
-                }
-              `}
-            >
-              <div className="flex items-center gap-5 p-5">
-                {/* Decorative serif number */}
-                <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <span className="font-heading text-accent" style={{ fontSize: '2rem', lineHeight: 1 }}>5</span>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  {quizData ? (
-                    <>
-                      <p className="font-heading text-success text-xl mb-0.5">
-                        {lang === 'ru' ? 'Квиз пройден!' : 'Quiz complete!'}
-                      </p>
-                      <p className="text-muted text-sm font-body">
-                        {lang === 'ru' ? 'Нажмите чтобы изменить' : 'Click to change answers'}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-heading text-text-primary text-xl mb-0.5">
-                        {strings.quiz_label}
-                      </p>
-                      <p className="font-body text-sm text-muted">
-                        {strings.quiz_sub}
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                {/* Arrow icon */}
-                <div className="flex-shrink-0 text-accent">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 10h12M10 4l6 6-6 6" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Budget Slider */}
-            <div className="opacity-0-init animate-fadeInUp delay-600 rounded-xl border border-border bg-surface p-5 mb-7">
-              <div className="flex items-center justify-between mb-3">
-                <label className="font-body text-text-primary font-medium text-sm">
-                  {strings.budget_label}
-                </label>
-                <span className="font-heading text-accent" style={{ fontSize: '1.5rem', lineHeight: 1 }}>
-                  {formatBudget(budget)}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={15000}
-                max={500000}
-                step={5000}
-                value={budget}
-                onChange={e => setBudget(Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #C4714A ${((budget - 15000) / (500000 - 15000)) * 100}%, #E8E0D5 ${((budget - 15000) / (500000 - 15000)) * 100}%)`,
-                }}
-              />
-              <div className="flex justify-between mt-2 text-muted text-xs font-body">
-                <span>₽15,000</span>
-                <span>₽500,000</span>
-              </div>
-            </div>
-
-            {/* Error toast */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 flex items-center justify-between">
-                <p className="text-red-700 font-body text-sm">{error}</p>
-                {retryFn && (
-                  <button
-                    onClick={() => retryFn()}
-                    className="text-accent font-body text-sm font-medium hover:text-accent2 transition-colors duration-200 ml-4 flex-shrink-0"
-                  >
-                    {strings.retry}
-                  </button>
-                )}
-              </div>
+        {/* Quiz entry row */}
+        <button
+          onClick={() => setShowQuiz(true)}
+          className="quiz-row w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all duration-200 text-left"
+          style={{
+            background: quizData ? 'rgba(74,140,106,0.06)' : 'var(--surface)',
+            borderColor: quizData ? 'rgba(74,140,106,0.35)' : 'var(--border)',
+          }}
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(196,113,74,0.1)' }}>
+            {quizData ? (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8l4 4 6-7" stroke="#4A8C6A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <span className="font-heading text-accent font-bold text-xl" style={{ lineHeight: 1 }}>5</span>
             )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="font-body text-sm font-semibold text-text-primary block">
+              {quizData
+                ? (lang === 'ru' ? 'Квиз пройден — изменить' : 'Quiz done — change')
+                : s.quiz_label}
+            </span>
+            {!quizData && (
+              <span className="font-body text-xs text-muted block mt-0.5">{s.quiz_sub}</span>
+            )}
+          </div>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="flex-shrink-0 text-muted">
+            <path d="M5.5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
 
-            {/* CTA Button */}
-            <div className="opacity-0-init animate-fadeInUp delay-700">
-              <button
-                onClick={handleCTA}
-                disabled={!canProceed || loading}
-                className={`
-                  w-full md:w-auto md:min-w-[280px] font-body font-semibold text-base text-white
-                  rounded-full transition-all duration-200
-                  flex items-center justify-center
-                  ${canProceed && !loading
-                    ? 'bg-accent hover:bg-accent2 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer'
-                    : 'bg-accent/50 cursor-not-allowed'
-                  }
-                `}
-                style={{ height: '56px', paddingLeft: '2rem', paddingRight: '2rem' }}
-              >
-                {strings.cta}
-              </button>
-
-              {!canProceed && (
-                <p className="text-muted text-sm font-body mt-3">
-                  {lang === 'ru'
-                    ? 'Загрузите фото или пройдите квиз выше'
-                    : 'Upload a photo or take the quiz above'}
-                </p>
-              )}
-            </div>
-
+        {/* Budget slider */}
+        <div className="mt-4 px-4 py-4 rounded-xl border border-border" style={{ background: 'var(--surface)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-body text-sm font-medium text-text-primary">{s.budget_label}</span>
+            <span className="font-heading text-accent font-bold" style={{ fontSize: '1.4rem', lineHeight: 1 }}>
+              {formatBudget(budget)}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={15000}
+            max={500000}
+            step={5000}
+            value={budget}
+            onChange={e => setBudget(Number(e.target.value))}
+            className="nestglow-range w-full"
+            style={{
+              '--pct': `${pct}%`,
+            } as React.CSSProperties}
+          />
+          <div className="flex justify-between mt-2 font-body" style={{ fontSize: '11px', color: 'var(--muted)' }}>
+            <span>₽15 000</span>
+            <span>₽500 000</span>
           </div>
         </div>
-      </div>
+
+        {/* Error toast */}
+        {error && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center justify-between gap-3">
+            <p className="text-red-700 font-body text-sm">{error}</p>
+            {retryFn && (
+              <button onClick={() => retryFn()} className="text-accent font-body text-sm font-semibold flex-shrink-0">
+                {s.retry}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* CTA */}
+        <button
+          onClick={handleCTA}
+          disabled={!canProceed || loading}
+          className="cta-btn w-full mt-5 rounded-full font-body font-semibold text-white transition-all duration-200"
+          style={{
+            height: '56px',
+            fontSize: '1rem',
+            letterSpacing: '0.01em',
+            background: canProceed && !loading
+              ? 'linear-gradient(135deg, #C4714A 0%, #D4845D 100%)'
+              : 'rgba(196,113,74,0.38)',
+            boxShadow: canProceed && !loading
+              ? '0 6px 24px rgba(196,113,74,0.38), 0 2px 8px rgba(196,113,74,0.2)'
+              : 'none',
+            cursor: canProceed && !loading ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {s.cta}
+        </button>
+
+        {!canProceed && (
+          <p className="text-center font-body mt-2.5" style={{ fontSize: '12px', color: 'var(--muted)' }}>
+            {lang === 'ru' ? 'Загрузите фото или пройдите квиз' : 'Upload a photo or take the quiz'}
+          </p>
+        )}
+      </section>
     </main>
   );
 }

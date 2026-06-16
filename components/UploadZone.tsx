@@ -12,16 +12,14 @@ interface UploadZoneProps {
 export default function UploadZone({ onUpload, lang, preview }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const strings = t[lang];
+  const s = t[lang];
 
   const processFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      // Strip data URL prefix, keep only base64
-      const base64 = result.split(',')[1];
-      onUpload(base64);
+      onUpload(result.split(',')[1]);
     };
     reader.readAsDataURL(file);
   }, [onUpload]);
@@ -33,19 +31,8 @@ export default function UploadZone({ onUpload, lang, preview }: UploadZoneProps)
     if (file) processFile(file);
   }, [processFile]);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleClick = () => {
-    inputRef.current?.click();
-  };
-
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) processFile(file);
@@ -53,75 +40,73 @@ export default function UploadZone({ onUpload, lang, preview }: UploadZoneProps)
 
   return (
     <div
-      onClick={handleClick}
+      onClick={() => inputRef.current?.click()}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      className={`
-        relative w-full min-h-[220px] rounded-xl cursor-pointer
-        flex flex-col items-center justify-center overflow-hidden
-        transition-all duration-200
-        ${preview
-          ? 'border-0'
-          : isDragging
-          ? 'border-2 border-dashed border-accent bg-accent/5 scale-[1.01]'
-          : 'border-2 border-dashed border-border bg-surface/50 hover:border-accent/60 hover:bg-accent/3'
-        }
-      `}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-      aria-label={strings.upload_label}
+      onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+      aria-label={s.upload_label}
+      className="relative w-full overflow-hidden cursor-pointer select-none transition-all duration-200"
+      style={{
+        minHeight: preview ? '180px' : '148px',
+        borderRadius: '14px',
+        border: preview ? 'none' : `2px dashed ${isDragging ? '#C4714A' : '#D8D0C5'}`,
+        background: preview ? 'transparent' : isDragging ? 'rgba(196,113,74,0.05)' : 'var(--surface)',
+      }}
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
       {preview ? (
-        /* Preview mode */
+        /* ── Preview state ── */
         <>
           <img
             src={`data:image/jpeg;base64,${preview}`}
             alt="Room preview"
             className="w-full h-full object-cover absolute inset-0"
-            style={{ minHeight: '220px' }}
+            style={{ minHeight: '180px', borderRadius: '14px' }}
           />
           {/* Bottom gradient */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/50 to-transparent" />
-          {/* Hover overlay with change button */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/30">
-            <div className="bg-white/95 rounded-full px-5 py-2.5 flex items-center gap-2 shadow-lg">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#C4714A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11.5 2.5a2.121 2.121 0 013 3L5 15l-4 1 1-4L11.5 2.5z" />
-              </svg>
-              <span className="font-body text-sm font-semibold text-text-primary">
-                {lang === 'ru' ? 'Изменить фото' : 'Change photo'}
-              </span>
-            </div>
+          <div className="absolute bottom-0 left-0 right-0 h-20 rounded-b-[14px]"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)' }} />
+          {/* Change pill — always visible bottom */}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 rounded-full px-4 py-2 shadow-md">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M9 1.5a1.5 1.5 0 012 2L3.5 11.5 1 12l.5-2.5L9 1.5z" />
+            </svg>
+            <span className="font-body text-xs font-semibold text-text-primary">
+              {lang === 'ru' ? 'Изменить фото' : 'Change photo'}
+            </span>
           </div>
         </>
       ) : (
-        /* Empty state */
-        <div className="flex flex-col items-center gap-4 p-8 text-center">
-          {/* Plus-in-circle SVG icon */}
-          <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#C4714A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="14" cy="14" r="12" />
-              <line x1="14" y1="9" x2="14" y2="19" />
-              <line x1="9" y1="14" x2="19" y2="14" />
+        /* ── Empty state ── */
+        <div className="flex items-center gap-4 px-5 py-5">
+          {/* Icon */}
+          <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(196,113,74,0.1)' }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#C4714A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="1" y="5" width="20" height="15" rx="3" />
+              <circle cx="11" cy="12.5" r="3.5" />
+              <path d="M7 5l1.5-3h5L15 5" />
             </svg>
           </div>
-          <div>
-            <p className="font-body font-semibold text-text-primary text-base">
-              {strings.upload_label}
+          {/* Text */}
+          <div className="flex-1 min-w-0">
+            <p className="font-body font-semibold text-text-primary" style={{ fontSize: '0.9rem' }}>
+              {s.upload_label}
             </p>
-            <p className="font-body text-sm text-muted mt-1">
-              {strings.upload_sub}
+            <p className="font-body text-muted mt-0.5" style={{ fontSize: '0.78rem' }}>
+              {s.upload_sub}
             </p>
+          </div>
+          {/* Arrow */}
+          <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: 'rgba(196,113,74,0.1)' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#C4714A" strokeWidth="2" strokeLinecap="round">
+              <path d="M2 7h10M7 2l5 5-5 5" />
+            </svg>
           </div>
         </div>
       )}
